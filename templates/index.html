@@ -3,123 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MongoDB Flask Interface</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        ul { list-style-type: none; padding: 0; }
-        li { background-color: #f9f9f9; margin-bottom: 10px; padding: 10px; border-radius: 5px; word-wrap: break-word; }
-        form { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f0f0f0; margin-bottom: 15px; }
-        input[type="text"], input[type="submit"], select { padding: 8px; margin-right: 10px; border-radius: 3px; border: 1px solid #ccc; }
-        input[type="submit"] { background-color: #4CAF50; color: white; cursor: pointer; border: none; }
-        input[type="submit"]:hover { background-color: #45a049; }
-        .danger-button { background-color: #f44336; }
-        .danger-button:hover { background-color: #da190b; }
-        .flash-message { padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        .flash-message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .flash-message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .flash-message.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .flash-message.info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-        .current-collection-display { margin-bottom: 20px; font-size: 1.2em; font-weight: bold; }
-    </style>
+    <title>My Flask App</title>
 </head>
 <body>
-    <h1>MongoDB Flask Interface</h1>
+    <h1>Hello from Flask!</h1>
 
-    {# Display flash messages #}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <ul class="flash-messages">
+        <ul>
         {% for category, message in messages %}
-          <li class="flash-message {{ category }}">{{ message }}</li>
+          <li class="{{ category }}">{{ message }}</li>
         {% endfor %}
         </ul>
       {% endif %}
     {% endwith %}
 
-    <div class="current-collection-display">
-        {% if current_collection_name %}
-            Currently selected collection: <strong>{{ current_collection_name }}</strong>
-        {% else %}
-            No collection selected or available.
-        {% endif %}
-    </div>
-
-    <h2>Select Collection</h2>
-    <form action="/" method="post">
-        <label for="selected_collection">Choose Collection:</label>
+    <h2>Collections</h2>
+    <p>Current Collection: {{ current_collection_name or "None" }}</p>
+    <form method="POST" action="{{ url_for('index') }}">
+        <label for="selected_collection">Switch Collection:</label>
         <select name="selected_collection" id="selected_collection">
-            {% if all_collection_names %}
-                {% for collection_name_item in all_collection_names %}
-                    <option value="{{ collection_name_item }}" {% if collection_name_item == current_collection_name %}selected{% endif %}>
-                        {{ collection_name_item }}
-                    </option>
-                {% endfor %}
-            {% else %}
-                <option value="" disabled>No collections available</option>
-            {% endif %}
+            {% for collection_name in all_collection_names %}
+                <option value="{{ collection_name }}" {% if collection_name == current_collection_name %}selected{% endif %}>
+                    {{ collection_name }}
+                </option>
+            {% endfor %}
         </select>
-        <input type="submit" value="Select">
+        <button type="submit">Switch</button>
     </form>
 
+    <hr>
+
     <h2>Create New Collection</h2>
-    <form action="/create_collection" method="post">
+    <form method="POST" action="{{ url_for('create_collection') }}">
         <label for="new_collection_name">Collection Name:</label>
         <input type="text" id="new_collection_name" name="new_collection_name" required>
-        <input type="submit" value="Create Collection">
+        <button type="submit">Create Collection</button>
     </form>
 
     {% if current_collection_name %}
-        <h2>Items in "{{ current_collection_name }}"</h2>
-        {% if items %}
-            <ul>
-                {% for item in items %}
-                    <li>
-                        <strong>ID:</strong> {{ item._id }} <br>
-                        {% for key, value in item.items() %}
-                            {% if key != "_id" %}
-                                <strong>{{ key }}:</strong> {{ value }} <br>
-                            {% endif %}
-                        {% endfor %}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No items found in this collection.</p>
-        {% endif %}
-
-        <h2>Add New Item to "{{ current_collection_name }}"</h2>
-        <form action="/add" method="post">
-            <label for="name">Name:</label>
-            <input type="text" id="name" name="name" required>
-            <label for="description">Description (optional):</label>
-            <input type="text" id="description" name="description">
-            <input type="submit" value="Add Item">
+        <h2>Delete Current Collection: {{ current_collection_name }}</h2>
+        <form method="POST" action="{{ url_for('delete_collection') }}">
+            <input type="hidden" name="collection_to_delete" value="{{ current_collection_name }}">
+            <button type="submit" onclick="return confirm('Are you sure you want to delete this collection?');">Delete {{ current_collection_name }}</button>
         </form>
-
-        <h2>Delete Item by ID from "{{ current_collection_name }}"</h2>
-        <form action="/delete" method="post">
-            <label for="delete_id">Item ID:</label>
-            <input type="text" id="delete_id" name="delete_id" placeholder="Enter ID to delete" required>
-            <input type="submit" value="Delete Item">
-        </form>
-    {% else %}
-        <p>Please select or create a collection to view/add/delete items.</p>
     {% endif %}
 
-    {% if all_collection_names %}
-        <h2>Delete an Existing Collection</h2>
-        <form action="/delete_collection" method="post">
-            <label for="collection_to_delete">Collection to Delete:</label>
-            <select name="collection_to_delete" id="collection_to_delete">
-                {% for collection_name_item in all_collection_names %}
-                    <option value="{{ collection_name_item }}">
-                        {{ collection_name_item }}
-                    </option>
-                {% endfor %}
-            </select>
-            <input type="submit" value="Delete Selected Collection" class="danger-button" onclick="return confirm('Are you sure you want to delete this collection and all its data? This cannot be undone!');">
+    <hr>
+
+    {% if current_collection_name %}
+        <h2>Items in {{ current_collection_name }}</h2>
+        <ul>
+            {% for item in items %}
+                <li>
+                    {{ item.name }} {% if item.description %}- {{ item.description }}{% endif %}
+                    <form method="POST" action="{{ url_for('delete_item') }}" style="display:inline;">
+                        <input type="hidden" name="delete_id" value="{{ item._id }}">
+                        <button type="submit">Delete Item</button>
+                    </form>
+                </li>
+            {% else %}
+                <li>No items found in this collection.</li>
+            {% endfor %}
+        </ul>
+
+        <h2>Add New Item to {{ current_collection_name }}</h2>
+        <form method="POST" action="{{ url_for('add_item') }}">
+            <div>
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div>
+                <label for="description">Description (Optional):</label>
+                <input type="text" id="description" name="description">
+            </div>
+            <button type="submit">Add Item</button>
         </form>
+    {% else %}
+        <p>Select or create a collection to manage items.</p>
     {% endif %}
 
 </body>
